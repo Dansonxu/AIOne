@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智膳管家 - 智能饮食生成器</title>
+    <style>
+        :root {
+            --primary: #10b981; /* 健康绿 */
+            --primary-dark: #059669;
+            --bg: #f3f4f6;
+            --text: #1f2937;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        header h1 {
+            color: var(--primary-dark);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #6b7280;
+        }
+
+        /* Input Section */
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+        .btn-primary:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Results Section */
+        .result-section {
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.5s ease;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .meal-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+        .meal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .meal-header {
+            background: var(--primary);
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .meal-body {
+            padding: 15px;
+        }
+        .meal-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .meal-stats {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+        .tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .tag {
+            background: #ecfdf5;
+            color: var(--primary-dark);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* Shopping List */
+        .shopping-list ul {
+            list-style: none;
+            padding: 0;
+            columns: 2; /* Two columns layout */
+        }
+        .shopping-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+        }
+        .shopping-list input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🥗 智膳管家</h1>
+        <p>您的私人 AI 营养规划师</p>
+    </header>
+
+    <div class="card">
+        <div class="form-group">
+            <label>您的主要目标</label>
+            <select id="goalSelect">
+                <option value="loss">减脂 (低卡 / 高蛋白)</option>
+                <option value="gain">增肌 (高碳水 / 高蛋白)</option>
+                <option value="maintain">维持健康 (均衡饮食)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>现有的烹饪设备</label>
+            <select id="deviceSelect">
+                <option value="all">全套厨房</option>
+                <option value="simple">仅微波炉/空气炸锅</option>
+            </select>
+        </div>
+        <button class="btn-primary" onclick="generatePlan()" id="genBtn">生成今日菜单</button>
+    </div>
+
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <p>AI 正在分析营养成分...</p>
+    </div>
+
+    <div class="result-section" id="resultSection">
+        
+        <h3>📅 今日推荐食谱</h3>
+        <div class="menu-grid" id="menuContainer">
+            </div>
+
+        <div class="card" style="background: #ecfdf5; border: 1px solid var(--primary);">
+            <h4 style="margin:0 0 10px 0; color: var(--primary-dark);">📊 营养总览</h4>
+            <div id="nutritionSummary"></div>
+        </div>
+
+        <h3>🛒 智能采购清单</h3>
+        <div class="card shopping-list">
+            <p style="color:#666; font-size:0.9rem; margin-top:0;">已为您自动去重合并原料：</p>
+            <ul id="shoppingListContainer">
+                </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 模拟数据库 (Mock Data) ---
+    const recipes = {
+        breakfast: [
+            { name: "全麦鸡蛋卷饼", cal: 350, pro: 15, ingredients: ["全麦饼皮 x1", "鸡蛋 x2", "生菜 x50g"], type: "loss" },
+            { name: "燕麦蓝莓酸奶杯", cal: 300, pro: 12, ingredients: ["即食燕麦 x40g", "希腊酸奶 x100g", "蓝莓 x20g"], type: "loss" },
+            { name: "牛肉三明治", cal: 500, pro: 30, ingredients: ["吐司 x2", "牛肉片 x100g", "芝士片 x1"], type: "gain" }
+        ],
+        lunch: [
+            { name: "空气炸锅时蔬鸡丁", cal: 450, pro: 35, ingredients: ["鸡胸肉 x200g", "彩椒 x1", "西葫芦 x100g"], type: "simple" },
+            { name: "藜麦三文鱼碗", cal: 550, pro: 30, ingredients: ["三文鱼 x150g", "藜麦饭 x150g", "牛油果 x0.5"], type: "all" },
+            { name: "黑椒牛柳意面", cal: 650, pro: 40, ingredients: ["意大利面 x100g", "牛柳 x150g", "洋葱 x0.5"], type: "gain" }
+        ],
+        dinner: [
+            { name: "金枪鱼轻食沙拉", cal: 300, pro: 25, ingredients: ["金枪鱼罐头 x1", "黄瓜 x1", "玉米粒 x30g"], type: "loss" },
+            { name: "番茄豆腐菌菇汤", cal: 250, pro: 15, ingredients: ["嫩豆腐 x100g", "番茄 x1", "金针菇 x100g"], type: "loss" },
+            { name: "家常红烧肉(少油版)", cal: 600, pro: 20, ingredients: ["五花肉 x150g", "生抽", "老抽"], type: "gain" }
+        ]
+    };
+
+    // --- 核心逻辑函数 ---
+
+    function generatePlan() {
+        // 1. UI 状态控制
+        const loader = document.getElementById('loader');
+        const results = document.getElementById('resultSection');
+        const btn = document.getElementById('genBtn');
+        
+        btn.disabled = true;
+        btn.innerText = "生成中...";
+        loader.style.display = 'block';
+        results.style.display = 'none';
+
+        // 2. 获取用户输入
+        const goal = document.getElementById('goalSelect').value;
+        
+        // 3. 模拟 AI 思考延迟 (1秒)
+        setTimeout(() => {
+            // 选菜逻辑
+            const b = pickRecipe(recipes.breakfast, goal);
+            const l = pickRecipe(recipes.lunch, goal);
+            const d = pickRecipe(recipes.dinner, goal);
+
+            // 渲染菜单
+            renderMenu([
+                { type: "早餐", ...b },
+                { type: "午餐", ...l },
+                { type: "晚餐", ...d }
+            ]);
+
+            // 计算总营养
+            const totalCal = b.cal + l.cal + d.cal;
+            const totalPro = b.pro + l.pro + d.pro;
+            document.getElementById('nutritionSummary').innerHTML = 
+                `<strong>总热量:</strong> ${totalCal} kcal &nbsp;|&nbsp; <strong>蛋白质:</strong> ${totalPro}g`;
+
+            // 生成采购单
+            const allIngredients = [...b.ingredients, ...l.ingredients, ...d.ingredients];
+            renderShoppingList(allIngredients);
+
+            // 恢复 UI
+            loader.style.display = 'none';
+            results.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "重新生成";
+        }, 800);
+    }
+
+    // 简单的筛选逻辑
+    function pickRecipe(list, goal) {
+        // 如果是增肌，优先选热量高的；减脂选热量低的。
+        // 这里为了演示简化逻辑，直接随机或者按类型筛选
+        let filtered = list;
+        if (goal === 'loss') {
+            filtered = list.filter(r => r.cal < 400 || r.type === 'loss');
+        } else if (goal === 'gain') {
+            filtered = list.filter(r => r.cal > 400 || r.type === 'gain');
+        }
+        
+        // 如果筛选后没有结果（数据不够），就退回到整个列表
+        if (filtered.length === 0) filtered = list;
+
+        // 随机取一个
+        return filtered[Math.floor(Math.random() * filtered.length)];
+    }
+
+    function renderMenu(meals) {
+        const container = document.getElementById('menuContainer');
+        container.innerHTML = '';
+
+        meals.forEach(meal => {
+            const html = `
+                <div class="meal-card">
+                    <div class="meal-header">
+                        <span>${meal.type}</span>
+                        <span>${meal.cal} kcal</span>
+                    </div>
+                    <div class="meal-body">
+                        <div class="meal-title">${meal.name}</div>
+                        <div class="meal-stats">蛋白质: ${meal.pro}g</div>
+                        <div class="tags">
+                            ${meal.ingredients.slice(0, 3).map(i => `<span class="tag">${i.split(' ')[0]}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function renderShoppingList(ingredients) {
+        const listContainer = document.getElementById('shoppingListContainer');
+        listContainer.innerHTML = '';
+        
+        // 这里可以做简单的去重逻辑，这里做直接展示
+        const uniqueItems = [...new Set(ingredients)];
+
+        uniqueItems.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<label><input type="checkbox"> ${item}</label>`;
+            listContainer.appendChild(li);
+        });
+    }
+</script>
+
+</body>
+</html>
